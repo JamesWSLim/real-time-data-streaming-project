@@ -1,3 +1,7 @@
 superset/
 kafka-spark-env/
 postgresql-42.7.1.jar
+dummy_data.ipynb
+postgres_query.ipynb
+data/dataset.csv
+data/impression-click.csv
