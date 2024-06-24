@@ -70,8 +70,8 @@ click_raw_df = click_json_df.withColumn("value", from_json(click_json_df["value"
 click_raw_df = click_raw_df.replace("\"NaN\"", None)
 
 ### apply watermarks on event-time columns
-impressionsWithWatermark = impression_raw_df.withWatermark("ImpressionTimestamp", "1 hour").alias("impression")
-clicksWithWatermark = click_raw_df.withWatermark("ClickTimestamp", "2 hours").alias("click")
+impressionsWithWatermark = impression_raw_df.withWatermark("ImpressionTimestamp", "30 minutes").alias("impression")
+clicksWithWatermark = click_raw_df.withWatermark("ClickTimestamp", "30 minutes").alias("click")
 
 ### stream-stream left outer join
 joined_stream = impressionsWithWatermark.join(
@@ -79,7 +79,7 @@ joined_stream = impressionsWithWatermark.join(
   expr("""
     click.JoinID = impression.ImpressionID AND
     click.ClickTimestamp >= impression.ImpressionTimestamp AND
-    click.ClickTimestamp <= impression.ImpressionTimestamp + interval 1 hour
+    click.ClickTimestamp <= impression.ImpressionTimestamp
     """),
     "leftOuter"
 )
