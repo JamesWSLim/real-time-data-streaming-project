@@ -2,43 +2,48 @@ import findspark
 findspark.init()
 from pyspark.sql.functions import *
 from pyspark.sql import SparkSession
-from pyspark.sql.types import FloatType, StringType, StructType, TimestampType
+from pyspark.sql.types import FloatType, StringType, StructType, TimestampType, IntegerType
 import os
 import psycopg2
 from sqlalchemy import create_engine
+import pandas as pd
 
 os.environ['PYSPARK_SUBMIT_ARGS'] = '--packages org.apache.spark:spark-streaming-kafka-0-10_2.12:3.2.0,org.apache.spark:spark-sql-kafka-0-10_2.12:3.2.0 pyspark-shell'
 
-conn = psycopg2.connect(
-    host="localhost",
-    database="impression_db",
-    user="root",
-    password="root")
-
-# JSON Schema
-json_schema = StructType() \
-  .add('ImpressionID', StringType()) \
-  .add('UserID', StringType()) \
-  .add('SessionID', StringType()) \
-  .add('AdID', StringType()) \
+# SQL Schema
+impression_schema = StructType() \
+  .add('ImpressionID', IntegerType()) \
+  .add('UserID', IntegerType()) \
+  .add('SessionID', IntegerType()) \
+  .add('AdID', IntegerType()) \
   .add('AdCategory', StringType()) \
-  .add('Timestamp', TimestampType()) \
+  .add('ImpressionTimestamp', TimestampType()) \
+  .add('Device', StringType()) \
   .add('OS', StringType()) \
   .add('Browser', StringType()) \
   .add('Location', StringType()) \
+  .add('PageID', StringType()) \
   .add('Referrer', StringType()) \
   .add('ImpressionCost', FloatType()) \
+
+click_schema = StructType() \
+  .add('JoinID', IntegerType()) \
+  .add('ClickTimestamp', TimestampType()) \
   .add('ClickID', StringType()) \
   .add('ClickPosition', StringType()) \
   .add('ClickCost', FloatType())
 
+
+### build spark session with postgresql and kafka packages
 spark = SparkSession \
   .builder \
   .config("spark.jars.packages", "org.apache.spark:spark-sql-kafka-0-10_2.12:3.1.2") \
   .config("spark.jars", "postgresql-42.7.1.jar") \
-  .appName("impression-event") \
+  .appName("impression-click-event") \
   .getOrCreate()
 
+
+### read impressions and clicks kafka streams
 impression_df = spark \
   .readStream \
   .format("kafka") \
@@ -47,48 +52,91 @@ impression_df = spark \
   .option("startingOffsets", "latest") \
   .load()
 
-impression_json_df = impression_df.selectExpr("cast(value as string) as value")
-raw_df = impression_json_df.withColumn("value", from_json(impression_json_df["value"], json_schema)).select("value.*") 
+click_df = spark \
+  .readStream \
+  .format("kafka") \
+  .option("kafka.bootstrap.servers", "localhost:9092") \
+  .option("subscribe", "click-event") \
+  .option("startingOffsets", "latest") \
+  .load()
 
-sql = """DROP TABLE IF EXISTS impression CASCADE"""
+### data transformation
+impression_json_df = impression_df.selectExpr("cast(value as string) as value")
+impression_raw_df = impression_json_df.withColumn("value", from_json(impression_json_df["value"], impression_schema)).select("value.*")
+impression_raw_df = impression_raw_df.replace("\"NaN\"", None)
+
+click_json_df = click_df.selectExpr("cast(value as string) as value")
+click_raw_df = click_json_df.withColumn("value", from_json(click_json_df["value"], click_schema)).select("value.*")
+click_raw_df = click_raw_df.replace("\"NaN\"", None)
+
+### apply watermarks on event-time columns
+impressionsWithWatermark = impression_raw_df.withWatermark("ImpressionTimestamp", "1 hour").alias("impression")
+clicksWithWatermark = click_raw_df.withWatermark("ClickTimestamp", "2 hours").alias("click")
+
+### stream-stream left outer join
+joined_stream = impressionsWithWatermark.join(
+  clicksWithWatermark,
+  expr("""
+    click.JoinID = impression.ImpressionID AND
+    click.ClickTimestamp >= impression.ImpressionTimestamp AND
+    click.ClickTimestamp <= impression.ImpressionTimestamp + interval 1 hour
+    """),
+    "leftOuter"
+)
+
+### connection to postgresql
+conn = psycopg2.connect(
+  host="localhost",
+  database="superset",
+  user="superset",
+  password="superset")
+
+### drop table if exist to ensure the table is new
+sql = """DROP TABLE IF EXISTS joined CASCADE"""
 cursor = conn.cursor()
 cursor.execute(sql)
 conn.commit()
 
-sql = """CREATE TABLE impression (
-        impressionid TEXT,
-        userid TEXT,
-        sessionid TEXT,
-        adid TEXT,
-        adcategory TEXT,
-        timestamp TIMESTAMP,
-        device TEXT,
-        os TEXT,
-        browser TEXT,
-        location TEXT,
-        pageid TEXT,
-        referrer TEXT,
-        impressioncost DECIMAL,
-        clickid TEXT NULL,
-        clickposition TEXT NULL,
-        clickcost DECIMAL NULL 
+### postgresql create table with schema
+sql = """CREATE TABLE joined (
+  impressionid INT,
+  userid INT,
+  sessionid INT,
+  adid INT,
+  adcategory TEXT,
+  impressiontimestamp TIMESTAMP,
+  device TEXT,
+  os TEXT,
+  browser TEXT,
+  location TEXT,
+  pageid TEXT,
+  referrer TEXT,
+  joinid INT,
+  impressioncost DECIMAL,
+  clicktimestamp TIMESTAMP,
+  clickid TEXT NULL,
+  clickposition TEXT NULL,
+  clickcost DECIMAL NULL 
 );"""
 cursor = conn.cursor()
 cursor.execute(sql)
 conn.commit()
 
+### write data into postgresql
 def write_to_postgresql(df,epoch_id):
   df.write \
   .format('jdbc') \
-  .option("url", "jdbc:postgresql://localhost:5432/impression_db") \
-  .option("dbtable", "impression") \
-  .option("user", "root") \
-  .option("password", "root") \
+  .option("url", "jdbc:postgresql://localhost:5432/superset") \
+  .option("dbtable", "joined") \
+  .option("user", "superset") \
+  .option("password", "superset") \
   .option("driver", "org.postgresql.Driver") \
   .mode('append') \
   .save()
 
-postgresql_stream=raw_df.writeStream \
-.foreachBatch(write_to_postgresql) \
-.start() \
-.awaitTermination()
+
+### start writing data into postgresql
+postgresql_stream=joined_stream.writeStream \
+  .foreachBatch(write_to_postgresql) \
+  .start() \
+  .awaitTermination()
