@@ -73,7 +73,7 @@ Using the provided schema, metrics such as Click-Through Rate (CTR), Cost Per Cl
 
 The screenshot above is an example of what our interactive dashboard looks like. It captures the essence of the data we are tracking and allows for an intuitive analysis at a glance. Each visualization and chart is tailored to provide clear and actionable insights.
 
-Features: \
+Features:
 * Real-Time Dashboards: Superset allows you to create real-time dashboards that refresh at predefined intervals, ensuring your data is up-to-date.
 * Filters: Superset provides extensive filtering options that enable users to drill down into the data. One of the most useful filters is filtering by custom SQL query, which makes it handy for SQL users
 * SQL Lab for Data Exploration: The SQL Lab feature allows users to write and run SQL queries directly in Superset, making it easier to manipulate data for specific visualization needs.
