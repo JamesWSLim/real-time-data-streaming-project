@@ -3,7 +3,11 @@
 Welcome to the Real Time Data Analysis Project - a robust, scalable, and real-time analytics solution designed to provide insightful dashboards and enhance business decisions. This project harnesses the power of Kafka, Spark Streaming, PostgreSQL, and Superset to process and visualize data as it arrives, giving you the ability to analyze trends and patterns instantaneously.
 
 ## Project Overview
-At the heart of this project is a stream-stream join operation that combines data from two key tables: impression and click. These tables capture user interactions and engagements with digital content in real-time, providing a comprehensive view of user behavior and advertisement performance.
+At the heart of this project is a stream-stream join operation that combines data from two key tables in real time: impression and click. These tables capture user interactions and engagements with digital content in real-time, providing a comprehensive view of user behavior and advertisement performance.
+
+## Data Architecture
+Here is a flowchart of the data architecture. Various applications and platforms are implemented to create an end-to-end pipeline. \
+![](img/architecture.jpg)
 
 \
 Here are some applications used in the project:
@@ -29,3 +33,35 @@ Here are some applications used in the project:
     * Modern data exploration and visualization platform.
     * Connects to PostgreSQL for data retrieval.
     * Enables the creation of interactive dashboards for real-time data analytics.
+
+## Data Schema
+**Table Structures**:
+
+![](img/table_schema.png)
+
+* **_df_impression_**: \
+The df_impression table captures the details of ad impressions, which are instances where an ad is exposed to a potential customer. Each row in this table represents a unique ad impression event. The schema for this table is as follows:
+    * ImpressionID: The primary key for the table, uniquely identifying each ad impression.
+    * UserID: The identifier for the user who saw the impression.
+    * SessionID: The identifier for the session during which the impression occurred.
+    * AdID: The identifier for the specific ad that was shown.
+    * AdCategory: The category or type of the ad (e.g., electronics, apparel).
+    * Device: The type of device on which the ad was displayed (e.g., mobile, desktop).
+    * OS: The operating system of the device.
+    * Browser: The web browser used when the impression was served.
+    * Location: The geographic location of the user when the ad was displayed.
+    * PageID: The identifier for the web page where the ad was placed.
+    * Referrer: The referrer URL if the user navigated from another site.
+    * ImpressionCost: The cost associated with serving the ad impression.
+
+
+
+* **_df_click_**: \
+The df_click table provides details about the clicks that followed the ad impressions. Each row tracks a user's click on an ad. The structure of this table includes:
+    * JoinID: The foreign key that references ImpressionID from the df_impression table, establishing a connection between an impression and a click.
+    * ClickID: A unique identifier for each click event.
+    * ClickPosition: The position or location on the page where the click occurred.
+    * ClickCost: The cost attributed to the click.
+
+**Key Metrics**: \
+Using the provided schema, metrics such as Click-Through Rate (CTR), Cost Per Click (CPC), Cost Per Impression (CPI), Total Impressions, Total Clicks, and overall campaign costs. These metrics are critical for assessing the performance of online advertising efforts.
