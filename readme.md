@@ -1,9 +1,9 @@
 <h1 align="center">Real Time Data Analysis Project</h1>
 
-Welcome to the Real Time Data Analysis Project - a robust, scalable, and real-time analytics solution designed to provide insightful dashboards and enhance business decisions. This project harnesses the power of Kafka, Spark Streaming, PostgreSQL, and Superset to process and visualize data as it arrives, giving you the ability to analyze trends and patterns instantaneously.
+Welcome to the Real Time Data Analysis Project - a robust, scalable, and real-time analytics solution designed to provide insightful dashboards and enhance business decisions. This project harnesses the power of Kafka, Spark Streaming, PostgreSQL, and Superset to process and visualize data as it arrives, giving you the ability to analyze trends and patterns instantaneously. Docker is used throughout the project to provide wide range of advantages including quick setup, environment consistency, ease of deployment and etc.
 
 ## Project Overview
-At the heart of this project is a stream-stream join operation that combines data from two key tables in real time: impression and click. These tables capture user interactions and engagements with digital content in real-time, providing a comprehensive view of user behavior and advertisement performance.
+At the heart of this project is a stream-stream join operation that combines data from two key tables in real time: impression and click. These tables capture user interactions and engagements with digital content in real-time, providing a comprehensive view of user behavior and advertisement performance. 
 
 ## Data Architecture
 Here is a flowchart of the data architecture. Various applications and platforms are implemented to create an end-to-end pipeline. \
@@ -63,5 +63,17 @@ The df_click table provides details about the clicks that followed the ad impres
     * ClickPosition: The position or location on the page where the click occurred.
     * ClickCost: The cost attributed to the click.
 
+## Dashboard and Analytics
+Our dashboard is designed on Apache Superset to provide a visual representation of the key performance indicators (KPIs) and metrics derived from our advertising datasets in real time. These metrics offer valuable insights into the effectiveness of ad campaigns and the behavior of users interacting with these ads.
+
 **Key Metrics**: \
 Using the provided schema, metrics such as Click-Through Rate (CTR), Cost Per Click (CPC), Cost Per Impression (CPI), Total Impressions, Total Clicks, and overall campaign costs. These metrics are critical for assessing the performance of online advertising efforts.
+
+![](img/dashboard.jpg)
+
+The screenshot above is an example of what our interactive dashboard looks like. It captures the essence of the data we are tracking and allows for an intuitive analysis at a glance. Each visualization and chart is tailored to provide clear and actionable insights.
+
+Features: \
+* Real-Time Dashboards: Superset allows you to create real-time dashboards that refresh at predefined intervals, ensuring your data is up-to-date.
+* Filters: Superset provides extensive filtering options that enable users to drill down into the data. One of the most useful filters is filtering by custom SQL query, which makes it handy for SQL users
+* SQL Lab for Data Exploration: The SQL Lab feature allows users to write and run SQL queries directly in Superset, making it easier to manipulate data for specific visualization needs.
